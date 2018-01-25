@@ -14,8 +14,10 @@ class AuthenticationRequiredError(RuntimeError):
 class KazooApiError(RuntimeError):
     pass
 
+
 class KazooApiAuthenticationError(RuntimeError):
     pass
+
 
 class KazooApiBadDataError(RuntimeError):
 

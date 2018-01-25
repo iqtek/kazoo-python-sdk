@@ -6,9 +6,9 @@ method_types = ["detail", "list", "update", "create", "delete", "partial_update"
 
 class RestResource(object):
 
-    def __init__(self, name, path, plural_name=None, extra_views=[],
-                 methods=method_types, exclude_methods=[],
-                 method_names={}):
+    def __init__(self, name, path, plural_name=None, extra_views=list(),
+                 methods=method_types, exclude_methods=list(),
+                 method_names=dict()):
         self._param_regex = re.compile("{([a-zA-Z0-9_]+)}")
         self.name = name
         self._plural_name = plural_name
@@ -64,7 +64,7 @@ class RestResource(object):
             if hasattr(view_desc, "has_key"):
                 result = view_desc
             else:
-                result = {"name": "get_" + view_desc, "path": view_desc}
+                result = {"name": view_desc['name'], "path": view_desc['path']}
             if "scope" not in result:
                 result["scope"] = "aggregate"
             if "method" not in result:
@@ -112,7 +112,7 @@ class RestResource(object):
     def dict_to_string(self, in_dict):
         res = ''
         for key, value in in_dict.iteritems():
-            res = res + key + '=' + value +'&'
+            res = res + key + '=' + value + '&'
         return res[:-1]
 
     @property
@@ -120,4 +120,3 @@ class RestResource(object):
         if self._plural_name:
             return self._plural_name
         return self.name + "s"
-

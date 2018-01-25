@@ -1,11 +1,10 @@
-import base64
 import json
 from kazoo import exceptions
 import hashlib
 import logging
 import re
 import requests
-import urllib
+from urllib.parse import urlencode
 from requests.adapters import HTTPAdapter
 from urllib3.poolmanager import PoolManager
 import ssl
@@ -15,12 +14,15 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class HttpsAdapterHack(HTTPAdapter):
     def init_poolmanager(self, connections, maxsize, block=False):
-        self.poolmanager = PoolManager(num_pools=connections,
-                                       maxsize=maxsize,
-                                       block=block,
-                                       ssl_version=ssl.PROTOCOL_TLSv1)
+        self.poolmanager = PoolManager(
+            num_pools=connections,
+            maxsize=maxsize,
+            block=block,
+            ssl_version=ssl.PROTOCOL_SSLv23)
+
 
 class KazooRequest(object):
     http_methods = ["get", "post", "put", "delete", "patch"]
@@ -50,7 +52,7 @@ class KazooRequest(object):
     def _get_url(self, params, base_url):
         url = base_url + self._get_url_with_variables_replaced(params)
         if self.get_params:
-            return url + "?" + urllib.urlencode(self.get_params)
+            return url + "?" + urlencode(self.get_params)
         return url
 
     def _get_url_with_variables_replaced(self, params):
@@ -65,13 +67,11 @@ class KazooRequest(object):
         if method is None:
             method = self.method
         if method.lower() not in self.http_methods:
-            raise exceptions.InvalidHttpMethodError("method {0} is not a valid"
-                                                    " http method".format(
-                                                        method))
+            raise exceptions.InvalidHttpMethodError(
+                "method {0} is not a valid http method".format(method))
         for param_name in self._required_param_names:
             if param_name not in kwargs:
-                raise ValueError("keyword argument {0} is required".format(
-                    param_name))
+                raise ValueError("keyword argument {0} is required".format(param_name))
 
         full_url = self._get_url(kwargs, base_url)
         logger.debug("Making {0} request to url {1}".
@@ -94,6 +94,7 @@ class KazooRequest(object):
         if raw_response.status_code == 500:
             self._handle_500_error(raw_response)
         response = raw_response.json()
+        print(json.dumps(response, indent=2))
         if response["status"] == "error":
             logger.debug("There was an error, full error text is: {0}".format(
                 raw_response.content))
@@ -107,12 +108,11 @@ class KazooRequest(object):
         if error_data['error'] == '401':
             raise exceptions.KazooApiAuthenticationError('Invalid credentials')
 
-        raise exceptions.KazooApiError("There was an error calling the kazoo api, "
-                                       "Request ID was {1}"
-                                       " the error was {0}".format(
-                                           error_data["message"],
-                                           error_data["request_id"],
-                                       ))
+        raise exceptions.KazooApiError(
+            "There was an error calling the kazoo api,"
+            " Request ID was {1} the error was {0}".format(error_data["message"],
+                                                           error_data["request_id"])
+        )
 
     def _handle_500_error(self, raw_response):
         request_id = raw_response.headers["X-Request-Id"]
@@ -120,17 +120,16 @@ class KazooRequest(object):
             message = raw_response.json()["data"]
         else:
             message = "There was no error message"
-        raise exceptions.KazooApiError("Internal Server Error, "
-                                       "Request ID was {0}"
-                                       " message was {1}".format(
-                                           request_id, message))
+        raise exceptions.KazooApiError(
+            "Internal Server Error, Request ID was {0} message was {1}".format(
+                request_id, message)
+        )
 
 
 class UsernamePasswordAuthRequest(KazooRequest):
 
     def __init__(self, username, password, account_name):
-        super(UsernamePasswordAuthRequest, self).__init__("/user_auth",
-                                                          auth_required=False)
+        super(UsernamePasswordAuthRequest, self).__init__("/user_auth", auth_required=False)
         self.username = username
         self.password = password
         self.account_name = account_name
@@ -140,13 +139,11 @@ class UsernamePasswordAuthRequest(KazooRequest):
             "credentials": self._get_hashed_credentials(),
             "account_name": self.account_name,
         }
-        return super(UsernamePasswordAuthRequest, self).execute(base_url,
-                                                                method="put",
-                                                                data=data)
+        return super(UsernamePasswordAuthRequest, self).execute(base_url, data=data, method='put')
 
     def _get_hashed_credentials(self):
         m = hashlib.md5()
-        m.update("{0}:{1}".format(self.username, self.password))
+        m.update("{0}:{1}".format(self.username, self.password).encode())
         return m.hexdigest()
 
 
@@ -161,5 +158,4 @@ class ApiKeyAuthRequest(KazooRequest):
         data = {
             "api_key": self.api_key
         }
-        return super(ApiKeyAuthRequest, self).execute(base_url, data=data,
-                                                      method="put")
+        return super(ApiKeyAuthRequest, self).execute(base_url, data=data, method="put")
