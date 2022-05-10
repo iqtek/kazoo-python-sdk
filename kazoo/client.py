@@ -328,6 +328,11 @@ class Client(metaclass=RestClientMetaClass):
                 "method": "put"
             },
             {
+                "name": "get_account_channels",
+                "path": "channels",
+                "scope": "object"
+            },
+            {
                 "name": "move_account",
                 "method": "post",
                 "path": "move"
