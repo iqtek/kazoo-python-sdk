@@ -9,7 +9,6 @@ from requests.adapters import HTTPAdapter
 from urllib3.poolmanager import PoolManager
 import ssl
 
-
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -85,6 +84,9 @@ class KazooRequest(object):
             kwargs["data"] = json.dumps({"data": data})
         if files:
             kwargs["files"] = files
+#        print(full_url)
+#        print(headers)
+#        print(kwargs)
         raw_response = req_func(full_url, headers=headers, **kwargs)
 
         if base_url.startswith('https'):
@@ -94,7 +96,7 @@ class KazooRequest(object):
         if raw_response.status_code == 500:
             self._handle_500_error(raw_response)
         response = raw_response.json()
-        print(json.dumps(response, indent=2))
+#        print(json.dumps(response, indent=2))
         if response["status"] == "error":
             logger.debug("There was an error, full error text is: {0}".format(
                 raw_response.content))

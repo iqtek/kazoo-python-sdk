@@ -173,7 +173,7 @@ class RestClientMetaClass(type):
         func = compile(func_definition, __file__, 'exec')
         d = {}
         exec(func, d)
-        print(func_name)
+#        print(func_name)
         return d[func_name]
 
 
@@ -253,6 +253,7 @@ class Client(metaclass=RestClientMetaClass):
         GET /accounts/{account_id}/media -> client.get_all_media(account_id)
         GET /accounts/{account_id}/children -> client.get_account_children(account_id)
         GET /accounts/{account_id}/descendants -> client.get_account_descendants(account_id)
+        GET /accounts/{account_id}/channels -> client.get_account_channels(account_id)
         GET /accounts/{account_id}/devices/status -> client.get_all_devices_status(account_id)
         GET /accounts/{account_id}/servers/{server_id}/deployment -> client.get_deployment(account_id, server_id)
         GET /accounts/{account_id}/users/hotdesk -> client.get_hotdesk(account_id)
@@ -322,15 +323,10 @@ class Client(metaclass=RestClientMetaClass):
                 "path": "reseller",
                 "method": "put"
             },
-            {   
+            {
                 "name": "create_api_key",
                 "path": "api_key",
                 "method": "put"
-            },
-            {
-                "name": "get_account_channels",
-                "path": "channels",
-                "scope": "object"
             },
             {
                 "name": "move_account",
@@ -339,7 +335,7 @@ class Client(metaclass=RestClientMetaClass):
             }
         ]
     )
-    
+
     """ 
     http://{SERVER}:8000/v2/accounts/{ACCOUNT_ID}/acdc_call_stats
     http://{SERVER}:8000/v2/accounts/{ACCOUNT_ID}/acdc_call_stats?created_from={FROM_TIMESTAMP}&created_to={TO_TIMESTAMP}
@@ -747,6 +743,19 @@ class Client(metaclass=RestClientMetaClass):
         "contact_list",
         "/accounts/{account_id}/contact_list/{ignored}",
         plural_name="contact_list",
+        methods=["list"]
+    )
+
+    """ 
+    http://{SERVER}:8000/v2/accounts/{ACCOUNT_ID}/channels
+    Support only GET methods
+    Call:
+        list_account_channels(account_id)
+    """
+    _account_channels_resource = RestResource(
+        "account_channels",
+        "/accounts/{account_id}/channels/{channel_id}",
+        plural_name="account_channels",
         methods=["list"]
     )
 
@@ -1831,7 +1840,6 @@ class Client(metaclass=RestClientMetaClass):
 
         if request.auth_required:
             kwargs["token"] = self.auth_token
-
         try:
             return request.execute(self.base_url, **kwargs)
         except KazooApiAuthenticationError as e:
